@@ -48,6 +48,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Version safety: the release tag must match package.json version.
+      # Tags use <major>.<minor>.<patch> without a "v" prefix (see .npmrc).
       - name: Verify version matches release tag
         if: github.event_name == 'release'
         run: |
