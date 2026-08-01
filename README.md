@@ -8,28 +8,21 @@ DeepInfra monthly usage.
 
 ## Install
 
-1. Install from npm (requires pi):
+Requires [pi](https://github.com/earendil-works/pi).
 
-   ```bash
-   pi install npm:pi-deepinfra
-   ```
+- **npm** (recommended):
 
-   Or clone/copy this directory into an auto-discovered extension location:
+  ```bash
+  pi install npm:pi-deepinfra
+  ```
 
-   ```bash
-   # global (all projects)
-   cp -r . ~/.pi/agent/extensions/deepinfra
-   # or project-local
-   cp -r . .pi/extensions/deepinfra
-   ```
+- **git** (latest source):
 
-   Or run from anywhere without installing:
+  ```bash
+  pi install git:github.com/puetsua/pi-deepinfra
+  ```
 
-   ```bash
-   pi -e /path/to/pi-deepinfra
-   ```
-
-2. Authenticate — either:
+1. Authenticate — either:
 
    - **Interactive**: inside pi, run `/login deepinfra` and paste your API key
      (from https://deepinfra.com/dash/api_keys). The key is stored in
@@ -39,7 +32,7 @@ DeepInfra monthly usage.
    If a `deepinfra` `api_key` entry already exists in `~/.pi/agent/auth.json`,
    it is picked up automatically.
 
-3. Restart pi (or `/reload`), then select a model:
+2. Restart pi (or `/reload`), then select a model:
 
    ```
    /model deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731
@@ -83,30 +76,3 @@ DeepInfra monthly usage.
 
   Note: `models.json` `deepinfra` entries replace the extension's models for that
   provider — set a full `models` list there if you use it.
-
-## How it works
-
-- `index.ts` — async extension factory: fetches the model catalog, registers the
-  provider via `createProvider()` with `openAICompletionsApi()`, wires the footer.
-- `models.ts` — catalog fetch, mapping to pi `Model` objects (incl. verified
-  `compat` flags: `maxTokensField: "max_tokens"`, `supportsDeveloperRole: false`,
-  `supportsStore: false`, `supportsReasoningEffort: true`), curated fallback list.
-- `billing.ts` — session usage footer (recomputed from session entries, survives
-  `/compact`) + monthly usage from DeepInfra's billing API.
-
-## Verification
-
-```bash
-pi --list-models | grep deepinfra          # ~96 models
-DEEPINFRA_API_KEY=... pi -p -m deepinfra/deepseek-ai/DeepSeek-V4-Flash-0731 "Say hi"
-pi -p -m deepinfra/deepseek-ai/DeepSeek-R1-0528 "17 * 23"   # reasoning + thinking display
-```
-
-## Troubleshooting
-
-- **"No API key"** when using a DeepInfra model: run `/login deepinfra` or set
-  `DEEPINFRA_API_KEY`.
-- **Catalog not loading**: check network; the extension falls back to a curated
-  list and logs a warning.
-- **Frontier models (Claude/Gemini on DeepInfra) 401/403**: they may be gated
-  per account — the model stays listed; requests fail per model.
