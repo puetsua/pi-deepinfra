@@ -1,0 +1,4 @@
+node_modules/
+*.tgz
+.pnpm-store/
+.DS_Store

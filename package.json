@@ -1,0 +1,44 @@
+{
+  "name": "pi-deepinfra",
+  "version": "0.1.0",
+  "description": "DeepInfra provider for pi: dynamic model catalog, reasoning-effort thinking levels, vision, session usage + monthly billing footer",
+  "type": "module",
+  "license": "MIT",
+  "author": "puetsua",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "deepinfra",
+    "llm",
+    "provider",
+    "openai-compatible",
+    "reasoning"
+  ],
+  "files": [
+    "index.ts",
+    "models.ts",
+    "billing.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/puetsua/pi-deepinfra.git"
+  },
+  "homepage": "https://github.com/puetsua/pi-deepinfra#readme",
+  "bugs": {
+    "url": "https://github.com/puetsua/pi-deepinfra/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
