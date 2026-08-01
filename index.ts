@@ -52,9 +52,6 @@ export default async function (pi: ExtensionAPI): Promise<void> {
 	let models;
 	try {
 		models = await fetchDeepInfraModels();
-		console.log(
-			`[pi-deepinfra] registered ${models.length} models from DeepInfra catalog`,
-		);
 	} catch (error) {
 		models = fallbackModels();
 		console.warn(
