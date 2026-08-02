@@ -1,6 +1,6 @@
 {
   "name": "pi-deepinfra",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "DeepInfra provider for pi: dynamic model catalog, reasoning-effort thinking levels, vision, session usage + monthly billing footer",
   "type": "module",
   "license": "MIT",

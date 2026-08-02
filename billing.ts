@@ -4,7 +4,9 @@
  *
  * Data sources (all verified against the live API):
  * - Session usage: pi message/entry `usage` (input/output/cacheRead/cacheWrite
- *   tokens + cost in $), recomputed from session entries on every update.
+ *   tokens + cost in $), recomputed from session entries on every update. Only
+ *   assistant messages attributed to THIS provider count, so switching to another
+ *   model/provider mid-session never mixes their usage into our totals.
  * - Monthly spend: GET https://api.deepinfra.com/payment/usage?from=current
  *   -> months[0].total_cost (integer CENTS).
  * - Configured limit: GET https://api.deepinfra.com/payment/config
@@ -118,10 +120,15 @@ export function createUsageFooter(pi: ExtensionAPI, providerId: string): UsageFo
 
 		const parts: string[] = [];
 
-		// Session tokens + cost, recomputed from session entries (survives /compact)
+		// Session tokens + cost, recomputed from session entries (survives /compact).
+		// Count only THIS provider's own assistant usage so that switching to another
+		// model/provider mid-session doesn't mix their tokens into our totals.
 		let t = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
 		for (const entry of ctx.sessionManager.getEntries()) {
-			const u = sumUsage(entry.message?.usage);
+			const msg = entry.message;
+			if (msg?.role !== "assistant") continue; // only assistant messages carry provider attribution
+			if (msg.provider !== providerId) continue; // DeepInfra-only usage
+			const u = sumUsage(msg.usage);
 			t.input += u.input;
 			t.output += u.output;
 			t.cacheRead += u.cacheRead;

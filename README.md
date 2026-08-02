@@ -48,7 +48,7 @@ Requires [pi](https://github.com/earendil-works/pi).
 | **Vision** | `vision`-tagged models accept image input. |
 | **Tool calling** | Standard OpenAI `tools`/`tool_choice`. |
 | **Cost tracking** | Input/output/cache prices from the catalog ($ per 1M tokens, `cache_read_tokens` when DeepInfra publishes it). Override per model in `~/.pi/agent/models.json` if needed. |
-| **Footer statusline** | While a DeepInfra model is active: `↑12.3k ↓4.5k · $0.042` for session tokens+cost, plus `M: $12.34 / $50.00` for DeepInfra monthly usage when a spending limit is configured (via `/payment/config`), or `M: $12.34` otherwise. Refresh with `/deepinfra-billing`. |
+| **Footer statusline** | While a DeepInfra model is active: `↑12.3k ↓4.5k · $0.042` for session tokens+cost, plus `M: $12.34 / $50.00` for DeepInfra monthly usage when a spending limit is configured (via `/payment/config`), or `M: $12.34` otherwise. The session figures count only assistant usage attributed to the DeepInfra provider, so switching to another model/provider mid-session never mixes their tokens/cost into these totals. Refresh with `/deepinfra-billing`. |
 
 ## Commands
 
