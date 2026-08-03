@@ -92,9 +92,18 @@ export function mapCatalogModel(raw: DeepInfraCatalogModel): Model<"openai-compl
 	};
 }
 
-/** Fetch and map the live catalog. Throws on network/parse errors. */
-export async function fetchDeepInfraModels(): Promise<Model<"openai-completions">[]> {
-	const response = await fetch(CATALOG_URL, { signal: AbortSignal.timeout(15_000) });
+/**
+ * Fetch and map the live catalog. Throws on network/parse errors.
+ *
+ * Honors an external abort signal (e.g. pi's session context) in addition to a
+ * hard 15s timeout so a stalled catalog request is never able to block the
+ * caller for longer than the timeout. Called lazily at session start to swap
+ * the live catalog into the provider — never awaited during startup.
+ */
+export async function fetchDeepInfraModels(signal?: AbortSignal): Promise<Model<"openai-completions">[]> {
+	const timeout = AbortSignal.timeout(15_000);
+	const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
+	const response = await fetch(CATALOG_URL, { signal: combined });
 	if (!response.ok) {
 		throw new Error(`catalog fetch failed: HTTP ${response.status}`);
 	}
