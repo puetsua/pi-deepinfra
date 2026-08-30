@@ -7,7 +7,7 @@
  * and capability tags (chat / reasoning / vision / prompt_cache).
  */
 
-import type { Model, ModelThinkingLevel, ThinkingLevelMap } from "@earendil-works/pi-ai";
+import type { Model, ThinkingLevel, ThinkingLevelMap } from "@earendil-works/pi-ai";
 
 export const PROVIDER_ID = "deepinfra";
 export const BASE_URL = "https://api.deepinfra.com/v1/openai";
@@ -45,11 +45,73 @@ export function displayName(id: string): string {
 }
 
 /**
- * Thinking level mapping. DeepInfra's `reasoning_effort` vocabulary is
- * identical to pi's (`minimal..max`) except "off" — DeepInfra uses "none".
- * Values pass through by name, so only "off" needs a mapping.
+ * Generic thinking-level mapping for every other reasoning model: pi levels
+ * pass through by name (`minimal`…`high`; `xhigh`/`max` not offered), `off`
+ * → "none" (DeepInfra disables reasoning).
  */
 export const THINKING_LEVEL_MAP: ThinkingLevelMap = { off: "none" };
+
+/**
+ * A family of reasoning models sharing one `reasoning_effort` vocabulary on
+ * DeepInfra. Supported `levels` map 1:1 (pi name == API value); anything else
+ * is hidden (`null`) so pi only offers the real distinct levels. `off` is the
+ * value sent to disable thinking (`null` when the family has no no-thinking
+ * mode — reasoning_effort is then omitted and thinking stays on).
+ */
+interface ThinkingFamily {
+	/** Model-id prefixes identifying the family, e.g. "deepseek-ai/". */
+	prefixes: readonly string[];
+	/** pi levels the family accepts natively, in pi order. */
+	levels: readonly ThinkingLevel[];
+	/** `reasoning_effort` value that disables thinking; null if impossible. */
+	off: string | null;
+	/** Reference for the family's reasoning API. */
+	docs: string;
+}
+
+/**
+ * Reasoning families whose `reasoning_effort` vocabulary deviates from the
+ * generic pass-through. First matching prefix wins.
+ */
+const THINKING_FAMILIES: readonly ThinkingFamily[] = [
+	{
+		// low/medium→high and xhigh→max are aliases, so only low/high/max
+		// are offered; `off` disables thinking via DeepInfra's "none".
+		prefixes: ["deepseek-ai/"],
+		levels: ["low", "high", "max"],
+		off: "none",
+		docs: "https://api-docs.deepseek.com/guides/thinking_mode/",
+	},
+	{
+		// GLM-5.3 / GLM-5.3-Flash have no no-thinking mode (`thinking.type`
+		// only supports `enabled`), so `off: null` hides the off level.
+		prefixes: ["zai-org/GLM-5.3"],
+		levels: ["low", "high", "max"],
+		off: null,
+		docs: "https://docs.z.ai/guides/vlm/glm-5.3-flash",
+	},
+];
+
+const PI_LEVELS: readonly ThinkingLevel[] = ["minimal", "low", "medium", "high", "xhigh", "max"];
+
+/** Derive a `ThinkingLevelMap` from a family's supported levels + off behavior. */
+function buildThinkingMap(family: ThinkingFamily): ThinkingLevelMap {
+	const map: ThinkingLevelMap = { off: family.off };
+	for (const level of PI_LEVELS) {
+		map[level] = family.levels.includes(level) ? level : null;
+	}
+	return map;
+}
+
+/** Derived maps, built once at module load. */
+const THINKING_MAPS: ReadonlyArray<{ prefixes: readonly string[]; map: ThinkingLevelMap }> =
+	THINKING_FAMILIES.map((family) => ({ prefixes: family.prefixes, map: buildThinkingMap(family) }));
+
+function thinkingMapFor(id: string, reasoning: boolean): ThinkingLevelMap | undefined {
+	if (!reasoning) return undefined;
+	const match = THINKING_MAPS.find(({ prefixes }) => prefixes.some((prefix) => id.startsWith(prefix)));
+	return match?.map ?? THINKING_LEVEL_MAP;
+}
 
 /**
  * Compatibility flags required by DeepInfra's OpenAI-compatible API
@@ -83,7 +145,7 @@ export function mapCatalogModel(raw: DeepInfraCatalogModel): Model<"openai-compl
 		provider: PROVIDER_ID,
 		baseUrl: BASE_URL,
 		reasoning,
-		thinkingLevelMap: reasoning ? THINKING_LEVEL_MAP : undefined,
+		thinkingLevelMap: thinkingMapFor(raw.id, reasoning),
 		input: hasVision ? ["text", "image"] : ["text"],
 		cost: { input: inputPrice, output: outputPrice, cacheRead, cacheWrite: 0 },
 		contextWindow: metadata.context_length ?? 128_000,
@@ -128,6 +190,7 @@ export function fallbackModels(): Model<"openai-completions">[] {
 		["meta-llama/Llama-3.3-70B-Instruct", 131_072, 131_072, 0.2, 0.32, false, false],
 		["meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8", 1_048_576, 1_048_576, 0.2, 0.8, false, true],
 		["google/gemma-3-27b-it", 131_072, 131_072, 0.08, 0.16, false, true],
+		["zai-org/GLM-5.3-Flash", 1_048_576, 1_048_576, 0.15, 0.5, true, true],
 		["mistralai/Mistral-Small-3.2-24B-Instruct-2506", 131_072, 131_072, 0.075, 0.2, false, false],
 		["google/gemini-3.1-pro", 1_000_000, 1_000_000, 2.0, 12.0, true, true],
 	];
@@ -139,7 +202,7 @@ export function fallbackModels(): Model<"openai-completions">[] {
 		provider: PROVIDER_ID,
 		baseUrl: BASE_URL,
 		reasoning,
-		thinkingLevelMap: reasoning ? THINKING_LEVEL_MAP : undefined,
+		thinkingLevelMap: thinkingMapFor(id, reasoning),
 		input: vision ? (["text", "image"] as const) : (["text"] as const),
 		cost: {
 			input,
