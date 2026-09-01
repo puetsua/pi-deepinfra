@@ -69,6 +69,10 @@ export function createUsageFooter(pi: ExtensionAPI, providerId: string): UsageFo
 	const STATUS_KEY = "deepinfra";
 	let monthly: MonthlyUsage | null = null;
 	let monthlyInFlight: Promise<void> | null = null;
+	// Retired when pi emits session_shutdown for this instance — pi always does
+	// that before invalidating this ctx on /reload and session replacement, so
+	// nothing may touch a captured ctx after that point.
+	let active = true;
 
 	const isActiveProvider = (ctx: ExtensionContext) => ctx.model?.provider === providerId;
 
@@ -113,6 +117,7 @@ export function createUsageFooter(pi: ExtensionAPI, providerId: string): UsageFo
 	}
 
 	function render(ctx: ExtensionContext): void {
+		if (!active) return; // retired: the captured ctx was invalidated after session_shutdown
 		if (!isActiveProvider(ctx)) {
 			ctx.ui.setStatus(STATUS_KEY, undefined);
 			return;
@@ -175,9 +180,11 @@ export function createUsageFooter(pi: ExtensionAPI, providerId: string): UsageFo
 			render(ctx);
 		},
 		onShutdown() {
+			active = false;
 			monthly = null;
 		},
 		async refreshMonthly(ctx) {
+			if (!active) return;
 			monthly = null; // force refetch
 			await refreshMonthly(ctx);
 			render(ctx);
