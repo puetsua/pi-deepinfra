@@ -62,20 +62,21 @@ export default function (pi: ExtensionAPI): void {
 	//    network (that hangs pi at "model catalog loading"). The cache matters
 	//    for clients that pick a model right after spawn (RPC `set_model`,
 	//    `enabledModels`) — they cannot wait for the lazy fetch below.
-	//    `createProvider` captures this array by reference and reads it on every
-	//    getModels() call, so swapping its contents in place below is picked up
-	//    by pi without re-registering.
+	//    `createProvider` captures this array by reference, so the swap below
+	//    updates it in place; re-registering then refreshes pi's snapshot.
 	const models: Model<"openai-completions">[] = readCachedModels() ?? fallbackModels();
-	pi.registerProvider(
-		createProvider({
-			id: PROVIDER_ID,
-			name: "DeepInfra",
-			baseUrl: BASE_URL,
-			auth: { apiKey: deepInfraApiKeyAuth },
-			models,
-			api: openAICompletionsApi(),
-		}),
-	);
+	const register = () =>
+		pi.registerProvider(
+			createProvider({
+				id: PROVIDER_ID,
+				name: "DeepInfra",
+				baseUrl: BASE_URL,
+				auth: { apiKey: deepInfraApiKeyAuth },
+				models,
+				api: openAICompletionsApi(),
+			}),
+		);
+	register();
 
 	// 2. Swap in the live public catalog lazily (fire-and-forget, never awaited,
 	//    honors the session abort signal). Works with or without an API key.
@@ -86,6 +87,9 @@ export default function (pi: ExtensionAPI): void {
 		try {
 			const live = await fetchDeepInfraModels(signal);
 			models.splice(0, models.length, ...live);
+			// pi serves RPC `get_available_models` from a snapshot that only
+			// re-registering rebuilds; without this, RPC clients never see the swap.
+			register();
 		} catch (error) {
 			console.warn(
 				`[pi-deepinfra] catalog fetch failed (${error instanceof Error ? error.message : String(error)}); keeping ${models.length} cached/fallback models`,
