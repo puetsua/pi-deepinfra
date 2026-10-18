@@ -63,6 +63,13 @@ export const THINKING_LEVEL_MAP: ThinkingLevelMap = { off: "none" };
  * - supportsDeveloperRole: false     (DeepInfra documents system/user/assistant/tool)
  * - supportsReasoningEffort: true    (top-level reasoning_effort param)
  */
+/**
+ * DeepInfra's catalog reports `max_tokens` equal to the context length, but the
+ * API rejects `max_tokens` above 65536 ("Range of max_tokens should be
+ * [1, 65536]"). The real output cap is not published anywhere, so clamp.
+ */
+export const MAX_OUTPUT_TOKENS = 65_536;
+
 export const DEEPINFRA_COMPAT = {
 	maxTokensField: "max_tokens",
 	supportsStore: false,
@@ -91,7 +98,7 @@ export function mapCatalogModel(raw: DeepInfraCatalogModel): Model<"openai-compl
 		input: hasVision ? ["text", "image"] : ["text"],
 		cost: { input: inputPrice, output: outputPrice, cacheRead, cacheWrite: 0 },
 		contextWindow: metadata.context_length ?? 128_000,
-		maxTokens: metadata.max_tokens ?? 4096,
+		maxTokens: Math.min(metadata.max_tokens ?? 4096, MAX_OUTPUT_TOKENS),
 		compat: DEEPINFRA_COMPAT,
 	};
 }
@@ -194,7 +201,7 @@ export function fallbackModels(): Model<"openai-completions">[] {
 			cacheWrite: 0,
 		},
 		contextWindow,
-		maxTokens,
+		maxTokens: Math.min(maxTokens, MAX_OUTPUT_TOKENS),
 		compat: DEEPINFRA_COMPAT,
 	}));
 }
