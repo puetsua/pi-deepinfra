@@ -98,7 +98,11 @@ export default function (pi: ExtensionAPI): void {
 
 	pi.on("session_start", (_event, ctx) => {
 		void refreshCatalog(ctx.signal);
-		void footer.onSessionStart(ctx);
+		// Never orphan this rejection: it bypasses pi's extension error reporting,
+		// escalates to uncaughtException, and exits pi. Log loudly instead.
+		footer.onSessionStart(ctx).catch((error) => {
+			console.error("[pi-deepinfra] footer update failed:", error);
+		});
 	});
 	pi.on("message_end", (event: MessageEndEvent, ctx) => {
 		footer.onMessageEnd(event, ctx);
