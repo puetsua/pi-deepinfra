@@ -51,9 +51,25 @@ export function displayName(id: string): string {
 /**
  * Thinking level mapping. DeepInfra's `reasoning_effort` vocabulary is
  * identical to pi's (`minimal..max`) except "off" — DeepInfra uses "none".
- * Values pass through by name, so only "off" needs a mapping.
+ * Values pass through by name.
+ *
+ * The map must be COMPLETE: pi only offers `xhigh`/`max` when a model's
+ * `thinkingLevelMap` carries an explicit non-null entry for them
+ * (`getSupportedThinkingLevels`), so mapping only "off" capped the selector at
+ * "high" and `clampThinkingLevel` silently rewrote a `max` request to "high".
+ * DeepInfra validates one global enum for every chat model — an invalid value
+ * answers HTTP 422 with `Input should be 'none', 'minimal', 'low', 'medium',
+ * 'high', 'xhigh' or 'max'` — so every level can be mapped for every model.
  */
-export const THINKING_LEVEL_MAP: ThinkingLevelMap = { off: "none" };
+export const THINKING_LEVEL_MAP: ThinkingLevelMap = {
+	off: "none",
+	minimal: "minimal",
+	low: "low",
+	medium: "medium",
+	high: "high",
+	xhigh: "xhigh",
+	max: "max",
+};
 
 /**
  * Compatibility flags required by DeepInfra's OpenAI-compatible API
